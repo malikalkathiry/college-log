@@ -1,5 +1,5 @@
 import type { ChecklistItem, Course, Lecturer, Note, ScheduleEntry, Task } from "@/types";
-import { createClient } from "@/lib/supabase/server";
+import { getAuthedClient } from "@/lib/supabase/server";
 import { getDeadlineGroup, selesaiTerlambat } from "@/lib/dates";
 
 export type TaskGroup = "hari_ini" | "besok" | "mendatang" | "terlambat" | "selesai";
@@ -21,7 +21,8 @@ export type NoteWithCourse = Note & {
   course_code: string;
 };
 
-type DbCourse = { name: string; code: string; lecturer_id: string | null } | null;
+type DbLecturerRef = { name: string } | null;
+type DbCourse = { name: string; code: string; lecturer_id: string | null; lecturers?: DbLecturerRef } | null;
 type DbTask = Record<string, unknown> & { courses?: DbCourse };
 type DbSchedule = Record<string, unknown> & { courses?: DbCourse };
 type DbNote = Record<string, unknown> & { courses?: { name: string; code: string } | null };
@@ -100,29 +101,16 @@ function rowToChecklistItem(row: Record<string, unknown>): ChecklistItem {
 
 /** Mengambil user yang sedang login. Semua query otomatis dibatasi oleh RLS. */
 async function requireUser() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error || !user) {
-    throw new Error("Sesi tidak valid. Silakan masuk kembali.");
-  }
-
-  return { supabase, userId: user.id };
+  return getAuthedClient();
 }
 
-/** Mengambil nama dosen berdasarkan daftar lecturer_id. */
-async function mapLecturerNames(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  ids: (string | null | undefined)[]
-): Promise<Map<string, string>> {
-  const unik = [...new Set(ids.filter((id): id is string => Boolean(id)))];
-  if (unik.length === 0) return new Map();
-
-  const { data } = await supabase.from("lecturers").select("id, name").in("id", unik);
-  return new Map((data ?? []).map((l) => [l.id as string, l.name as string]));
+/**
+ * Nama dosen diambil dari relasi yang sudah di-embed PostgREST
+ * (`courses(name, code, lecturer_id, lecturers(name))`), jadi tidak ada
+ * query tambahan per baris (menghilangkan pola N+1).
+ */
+function lecturerNameOf(course: DbCourse | undefined): string {
+  return course?.lecturers?.name ?? "—";
 }
 
 export const lecturerRepository = {
@@ -317,20 +305,14 @@ export const taskRepository = {
     const { supabase } = await requireUser();
     const { data, error } = await supabase
       .from("tasks")
-      .select("*, courses(name, code, lecturer_id)");
+      .select("*, courses(name, code, lecturer_id, lecturers(name))");
     if (error) throw error;
 
-    const rows = (data ?? []) as DbTask[];
-    const dosen = await mapLecturerNames(
-      supabase,
-      rows.map((r) => r.courses?.lecturer_id)
-    );
-
-    return rows.map((r) => ({
+    return ((data ?? []) as DbTask[]).map((r) => ({
       ...rowToTask(r),
       course_name: r.courses?.name ?? "—",
       course_code: r.courses?.code ?? "",
-      lecturer_name: (r.courses?.lecturer_id && dosen.get(r.courses.lecturer_id)) || "—",
+      lecturer_name: lecturerNameOf(r.courses),
     }));
   },
 
@@ -338,20 +320,18 @@ export const taskRepository = {
     const { supabase } = await requireUser();
     const { data, error } = await supabase
       .from("tasks")
-      .select("*, courses(name, code, lecturer_id)")
+      .select("*, courses(name, code, lecturer_id, lecturers(name))")
       .eq("id", id)
       .maybeSingle();
     if (error) throw error;
     if (!data) return null;
 
     const row = data as DbTask;
-    const dosen = await mapLecturerNames(supabase, [row.courses?.lecturer_id]);
-
     return {
       ...rowToTask(row),
       course_name: row.courses?.name ?? "—",
       course_code: row.courses?.code ?? "",
-      lecturer_name: (row.courses?.lecturer_id && dosen.get(row.courses.lecturer_id)) || "—",
+      lecturer_name: lecturerNameOf(row.courses),
     };
   },
 
@@ -380,13 +360,46 @@ export const taskRepository = {
   },
 
   async getTasksByGroup(group: TaskGroup): Promise<TaskWithCourse[]> {
+    const groups = await this.getTasksGrouped();
+    return groups[group];
+  },
+
+  /**
+   * Satu query untuk semua grup sekaligus. Sebelumnya halaman /tugas memanggil
+   * getTasksByGroup 5 kali, dan tiap panggilan mengambil SELURUH tugas lagi
+   * (5x query + 5x auth) — inilah penyebab utama halaman Tugas terasa berat.
+   */
+  async getTasksGrouped(): Promise<Record<TaskGroup, TaskWithCourse[]>> {
     const semua = await this.getTasksWithCourseInfo();
 
-    if (group === "selesai") {
-      return semua.filter((t) => t.status === "completed");
+    const groups: Record<TaskGroup, TaskWithCourse[]> = {
+      terlambat: [],
+      hari_ini: [],
+      besok: [],
+      mendatang: [],
+      selesai: [],
+    };
+
+    for (const task of semua) {
+      if (task.status === "completed") {
+        groups.selesai.push(task);
+        continue;
+      }
+      groups[getDeadlineGroup(task.deadline)].push(task);
     }
 
-    return semua.filter((t) => t.status !== "completed" && getDeadlineGroup(t.deadline) === group);
+    const byDeadline = (a: TaskWithCourse, b: TaskWithCourse) =>
+      a.deadline.localeCompare(b.deadline);
+
+    groups.terlambat.sort(byDeadline);
+    groups.hari_ini.sort(byDeadline);
+    groups.besok.sort(byDeadline);
+    groups.mendatang.sort(byDeadline);
+    groups.selesai.sort((a, b) =>
+      (b.completed_date ?? "").localeCompare(a.completed_date ?? "")
+    );
+
+    return groups;
   },
 };
 
@@ -460,20 +473,14 @@ export const scheduleRepository = {
     const { supabase } = await requireUser();
     const { data, error } = await supabase
       .from("schedules")
-      .select("*, courses(name, code, lecturer_id)");
+      .select("*, courses(name, code, lecturer_id, lecturers(name))");
     if (error) throw error;
 
-    const rows = (data ?? []) as DbSchedule[];
-    const dosen = await mapLecturerNames(
-      supabase,
-      rows.map((r) => r.courses?.lecturer_id)
-    );
-
-    return rows.map((r) => ({
+    return ((data ?? []) as DbSchedule[]).map((r) => ({
       ...rowToSchedule(r),
       course_name: r.courses?.name ?? "—",
       course_code: r.courses?.code ?? "",
-      lecturer_name: (r.courses?.lecturer_id && dosen.get(r.courses.lecturer_id)) || "—",
+      lecturer_name: lecturerNameOf(r.courses),
     }));
   },
 

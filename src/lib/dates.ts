@@ -13,6 +13,15 @@ export function isHari(value: string): value is DayOfWeek {
   return HARI.includes(value as DayOfWeek);
 }
 
+const HARI_BY_INDEX: DayOfWeek[] = [
+  "Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu",
+];
+
+/** Nama hari ini dalam Bahasa Indonesia. */
+export function getTodayHari(now: Date = new Date()): DayOfWeek {
+  return HARI_BY_INDEX[now.getDay()];
+}
+
 export function formatJamSingkat(time: string): string {
   return time.slice(0, 5);
 }

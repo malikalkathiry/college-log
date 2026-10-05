@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import "./globals.css";
-import BottomNav from "@/components/BottomNav";
 
 export const metadata: Metadata = {
   title: "College Log",
@@ -19,11 +18,8 @@ export default function RootLayout({
       lang="id"
       className={`${GeistSans.variable} ${GeistMono.variable} h-full antialiased`}
     >
-      <body className={`${GeistSans.className} min-h-full bg-background text-foreground pb-14`}>
-        <main className="max-w-lg mx-auto min-h-screen">
-          {children}
-        </main>
-        <BottomNav />
+      <body className={`${GeistSans.className} min-h-full bg-background text-foreground`}>
+        {children}
       </body>
     </html>
   );

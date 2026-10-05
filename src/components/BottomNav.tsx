@@ -1,38 +1,17 @@
-"use client";
+import { MOBILE_NAV_ITEMS } from "@/lib/nav";
+import NavLink from "./NavLink";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-
-const navItems = [
-  { href: "/", label: "Beranda", icon: "⌂" },
-  { href: "/tugas", label: "Tugas", icon: "☐" },
-  { href: "/jadwal", label: "Jadwal", icon: "☰" },
-  { href: "/catatan", label: "Catatan", icon: "✎" },
-];
-
+/**
+ * Navigasi bawah untuk mobile. Di desktop disembunyikan karena
+ * navigasi utama pindah ke Sidebar (kiri).
+ */
 export default function BottomNav() {
-  const pathname = usePathname();
-
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-surface border-t border-border z-50">
-      <div className="flex items-center justify-around h-14 max-w-lg mx-auto">
-        {navItems.map((item) => {
-          const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex flex-col items-center justify-center flex-1 h-full text-xs gap-0.5 transition-colors ${
-                isActive
-                  ? "text-accent"
-                  : "text-foreground-muted hover:text-foreground"
-              }`}
-            >
-              <span className="text-base leading-none">{item.icon}</span>
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-surface md:hidden">
+      <div className="mx-auto flex h-14 max-w-lg items-center">
+        {MOBILE_NAV_ITEMS.map((item) => (
+          <NavLink key={item.href} item={item} variant="bottom" />
+        ))}
       </div>
     </nav>
   );

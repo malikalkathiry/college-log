@@ -14,7 +14,7 @@ export default function PageHeader({
   action,
 }: PageHeaderProps) {
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background px-4 py-3">
+    <header className="border-b border-border bg-background px-4 py-3">
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
           {backHref ? (

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
@@ -32,3 +33,28 @@ export async function createClient() {
     }
   );
 }
+
+type AuthedClient = Awaited<ReturnType<typeof createClient>>;
+
+/**
+ * Satu client + satu panggilan auth.getUser() per request.
+ *
+ * `cache()` dari React membuat hasil ini dipakai bersama selama satu render
+ * request, sehingga beberapa repository call di halaman yang sama tidak lagi
+ * menembak `auth.getUser()` berulang kali (ini penyebab utama navigasi lambat).
+ */
+export const getAuthedClient = cache(
+  async (): Promise<{ supabase: AuthedClient; userId: string }> => {
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
+
+    if (error || !user) {
+      throw new Error("Sesi tidak valid. Silakan masuk kembali.");
+    }
+
+    return { supabase, userId: user.id };
+  }
+);

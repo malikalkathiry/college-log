@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { daftar } from "@/app/auth/actions";
@@ -108,9 +109,9 @@ export default function DaftarPage() {
 
         <p className="text-center text-sm text-foreground-muted">
           Sudah punya akun?{" "}
-          <a href="/masuk" className="text-accent hover:underline">
+          <Link href="/masuk" className="text-accent hover:underline">
             Masuk
-          </a>
+          </Link>
         </p>
       </div>
     </div>

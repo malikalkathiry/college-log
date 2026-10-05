@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { masuk } from "@/app/auth/actions";
@@ -90,9 +91,9 @@ export default function MasukPage() {
 
         <p className="text-center text-sm text-foreground-muted">
           Belum punya akun?{" "}
-          <a href="/daftar" className="text-accent hover:underline">
+          <Link href="/daftar" className="text-accent hover:underline">
             Daftar
-          </a>
+          </Link>
         </p>
       </div>
     </div>
