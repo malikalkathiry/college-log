@@ -1,29 +1,39 @@
-import {
-  BookOpen,
-  CalendarDays,
-  GraduationCap,
-  History,
-  LayoutDashboard,
-  ListTodo,
-  StickyNote,
-  type LucideIcon,
-} from "lucide-react";
+/**
+ * Konfigurasi navigasi.
+ *
+ * PENTING: file ini hanya berisi data biasa (string) — TIDAK boleh mengimpor
+ * komponen ikon. Data ini dipakai oleh Server Component (BottomNav) dan Client
+ * Component (NavLink). Kalau komponen React (fungsi) dimasukkan ke sini, ia ikut
+ * terkirim sebagai prop dari server ke client dan memicu error serialisasi
+ * "Only plain objects can be passed to Client Components".
+ *
+ * Nama ikon di-resolve menjadi komponen di `components/NavIcon.tsx` (client).
+ */
+
+export type NavIconName =
+  | "dashboard"
+  | "tugas"
+  | "jadwal"
+  | "catatan"
+  | "mata-kuliah"
+  | "dosen"
+  | "riwayat";
 
 export type NavItem = {
   href: string;
   label: string;
-  icon: LucideIcon;
+  icon: NavIconName;
 };
 
 /** Navigasi utama — dipakai bersama oleh sidebar (desktop) dan nav bawah (mobile). */
 export const NAV_ITEMS: NavItem[] = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/tugas", label: "Tugas", icon: ListTodo },
-  { href: "/jadwal", label: "Jadwal", icon: CalendarDays },
-  { href: "/catatan", label: "Catatan", icon: StickyNote },
-  { href: "/mata-kuliah", label: "Mata Kuliah", icon: BookOpen },
-  { href: "/dosen", label: "Dosen", icon: GraduationCap },
-  { href: "/riwayat", label: "Riwayat", icon: History },
+  { href: "/", label: "Dashboard", icon: "dashboard" },
+  { href: "/tugas", label: "Tugas", icon: "tugas" },
+  { href: "/jadwal", label: "Jadwal", icon: "jadwal" },
+  { href: "/catatan", label: "Catatan", icon: "catatan" },
+  { href: "/mata-kuliah", label: "Mata Kuliah", icon: "mata-kuliah" },
+  { href: "/dosen", label: "Dosen", icon: "dosen" },
+  { href: "/riwayat", label: "Riwayat", icon: "riwayat" },
 ];
 
 /** Subset untuk bottom navigation di mobile (ruang terbatas). */

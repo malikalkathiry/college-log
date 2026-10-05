@@ -1,4 +1,3 @@
-"use client";
 import Link from "next/link";
 import { GraduationCap } from "lucide-react";
 import { NAV_ITEMS } from "@/lib/nav";

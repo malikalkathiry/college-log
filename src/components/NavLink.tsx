@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { isNavActive, type NavItem } from "@/lib/nav";
+import NavIcon from "./NavIcon";
 
 type NavLinkProps = {
   item: NavItem;
@@ -13,7 +14,6 @@ type NavLinkProps = {
 export default function NavLink({ item, variant }: NavLinkProps) {
   const pathname = usePathname();
   const active = isNavActive(item.href, pathname);
-  const Icon = item.icon;
 
   if (variant === "bottom") {
     return (
@@ -24,7 +24,7 @@ export default function NavLink({ item, variant }: NavLinkProps) {
           active ? "text-accent" : "text-foreground-muted hover:text-foreground"
         }`}
       >
-        <Icon size={20} aria-hidden />
+        <NavIcon name={item.icon} size={20} />
         <span>{item.label}</span>
       </Link>
     );
@@ -40,7 +40,7 @@ export default function NavLink({ item, variant }: NavLinkProps) {
           : "text-foreground-muted hover:bg-surface-hover hover:text-foreground"
       }`}
     >
-      <Icon size={18} aria-hidden />
+      <NavIcon name={item.icon} size={18} />
       <span>{item.label}</span>
     </Link>
   );
